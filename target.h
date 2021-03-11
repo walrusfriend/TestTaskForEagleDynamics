@@ -1,19 +1,21 @@
 #ifndef TARGET_H
 #define TARGET_H
 
-#include "main.h"
+#include <iostream>
 
 class Target
 {
 public:
-    Target(double);
+    Target(double, double);
 
-private:
-    double m_x;
-    double m_y;
-    double m_velocity;
-    int8_t m_maxGLoad;
-    double Mach;
+    double x;
+    double z;
+    double V;
+    double psi;
+    double n;
+
+    double setNewRandomTimingToChangen(double dt);
+    void setNewRandomn();
 };
 
 #endif // TARGET_H

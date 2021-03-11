@@ -4,13 +4,16 @@
 #include <QMainWindow>
 #include <QScopedPointer>
 
-#include "main.h"
-#include "rocket.h"
+#include "interceptor.h"
 #include "target.h"
+#include "solver.h"
+#include "figure.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
+
+extern const double g_pi;
 
 class MainWindow : public QMainWindow
 {
@@ -24,17 +27,19 @@ public slots:
     void startSimulation();
 
 private:
-    double m_startRocketVelocity;
+    double m_startInterceptorVelocity;
     double m_startTargetVelocity;
-    double m_startDistinace;
+    double m_startDistance;
 
     std::map<std::string, std::vector<double>> output;
 
-    QScopedPointer<Rocket> rocket;
+    QScopedPointer<Interceptor> interceptor;
     QScopedPointer<Target> target;
+    QScopedPointer<Solver> solver;
+    QScopedPointer<Figure> figure;
 
     Ui::MainWindow *ui;
 
-    void integrationEuler(std::map<std::string, std::vector<double>>&, Rocket&, Target&);
+    void dataValidationCheck();
 };
 #endif // MAINWINDOW_H
