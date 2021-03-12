@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -37,7 +39,19 @@ void MainWindow::startSimulation()
     target.reset(new Target(m_startTargetVelocity, m_startDistance));
 
     // Aim the velocity vector ot the missile and the target at each other
-    double phi = atan((target->z - interceptor->z) / (target->x - interceptor->x));
+    double dz = target->z - interceptor->z;
+    double dx = target->x - interceptor->x;
+
+    double phi;
+    if (dz >= 0 && dx >= 0) {           // first quarter
+        phi = -atan(dz / dx);
+    } else if (dz > 0 && dx < 0) {      // second quarter
+        phi = g_pi + atan(dz / dx);
+    } else if (dz <= 0 && dx <= 0) {    // third quarter
+        phi = -g_pi - atan(dz / dx);
+    } else if (dz < 0 && dx > 0) {      // fourth quater
+        phi = -atan(dz / dx);
+    }
     interceptor->psi = phi;
     target->psi = g_pi + phi;
 
@@ -58,6 +72,25 @@ void MainWindow::startSimulation()
     solver->integrationEuler(output, *interceptor, *target);
 
     // Output
+        // write to the file
+    std::ofstream fout("output.cvs", std::ios_base::out | std::ios_base::trunc);
+    if (!fout.is_open()) {
+        std::cerr << "Couldn't open the file!\n";
+    }
+
+    // add row tite
+    fout << "t" << ',' << "V" << ',' << "V_t" << ',' << "n" << ','
+         << "n_t" << ',' << "x" << ',' << "x_t" << ','
+         << "z" << ',' << "z_t" << ',' << "distance" << std::endl;
+
+    for (int i = 0; i < output["t"].size(); ++i) {
+        fout << output["t"][i] << ',' << output["V"][i] << ',' << output["V_target"][i] << ','
+             << output["n"][i] << ',' << output["n_target"][i] << ',' << output["x"][i] << ','
+             << output["x_target"][i] << ',' << output["z"][i] << ',' << output["z_target"][i]
+             << ',' << output["distance"][i] << std::endl;
+    }
+    fout .close();
+
     figure.reset(new Figure(output));
     figure->show();
 
@@ -71,19 +104,25 @@ void MainWindow::dataValidationCheck()
     tmp = ui->le_interceptorVelocity->text().toDouble(&isOk);
     if (isOk)
         m_startInterceptorVelocity = tmp;
-    else
+    else {
         std::cerr << "Incorrect value!" << std::endl;
+        return;
+    }
 
     tmp = ui->le_targetVelocity->text().toDouble(&isOk);
     if (isOk)
         m_startTargetVelocity = tmp;
-    else
+    else {
         std::cerr << "Incorrect value!" << std::endl;
+        return;
+    }
 
     tmp = ui->le_initialDistance->text().toDouble();
     if (isOk)
         m_startDistance      = tmp;
-    else
+    else {
         std::cerr << "Incorrect value!" << std::endl;
+        return;
+    }
 }
 

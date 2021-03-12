@@ -4,6 +4,7 @@ Interceptor::Interceptor(double startVelocity) :
     x(0),
     z(0),
     V(startVelocity),
+    n(1),
     nMax(30),
     m(230),
     mFuel(60),

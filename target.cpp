@@ -10,7 +10,7 @@ Target::Target(double startVelocity, double distance) :
 
 double Target::setNewRandomTimingToChangen(double dt)
 {
-    return (rand() % 360) * dt; // 360 - time of engine thrust
+    return (rand() % 60) * dt; // 360 - time of engine thrust;
 }
 
 void Target::setNewRandomn()

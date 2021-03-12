@@ -3,6 +3,7 @@
 
 #include <QtWidgets/QGraphicsView>
 #include <QtCharts/QChartGlobal>
+#include <QtCharts/QSplineSeries>
 
 QT_CHARTS_BEGIN_NAMESPACE
 class QChart;
@@ -18,6 +19,8 @@ public:
     Figure(std::map<std::string, std::vector<double>> &output, QWidget *parent = 0);
 
 private:
+    QSplineSeries *interceptor_path;
+    QSplineSeries *target_path;
     QChart *chart;
 };
 

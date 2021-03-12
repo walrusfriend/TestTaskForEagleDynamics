@@ -10,6 +10,9 @@ void Solver::integrationEuler(std::map<std::string, std::vector<double>> &output
 {
     double dt = 0.01;   // Step of integration
 
+    // set time for next n_target change
+    double timeToChangen = target.setNewRandomTimingToChangen(dt);
+
     // Create buffers
     std::vector<double> i_psi;
     double tmp_m = interceptor.m;
@@ -19,7 +22,6 @@ void Solver::integrationEuler(std::map<std::string, std::vector<double>> &output
     t_psi.push_back(target.psi);
 
     double distance = sqrt(pow(target.x - interceptor.x, 2) + pow(target.z - interceptor.z, 2));
-
     do {
         // time
         output["t"].push_back(output["t"].back() + dt);
@@ -33,9 +35,41 @@ void Solver::integrationEuler(std::map<std::string, std::vector<double>> &output
 
         // Dogleg method
         // Angle of sighting
-        double phi = atan((output["z_target"].back() - output["z"].back()) /
-                          (output["x_target"].back() - output["x"].back()));
-        i_psi.push_back(phi);
+        // Define the coordinate quarter
+        double dz = output["z_target"].back() - output["z"].back();
+        double dx = output["x_target"].back() - output["x"].back();
+
+        double phi;
+        if (dz >= 0 && dx >= 0) {           // first quarter
+            phi = -atan(dz / dx);
+        } else if (dz > 0 && dx < 0) {      // second quarter
+            phi = g_pi - atan(dz / dx);
+        } else if (dz <= 0 && dx <= 0) {    // third quarter
+            phi = -g_pi - atan(dz / dx);
+        } else if (dz < 0 && dx > 0) {      // fourth quater
+            phi = -atan(dz / dx);
+        }
+
+        // Define the limit angle of yaw for this G load
+        double dpsi = (phi - i_psi.back()) / dt; // maybe (...)/dt
+        if (abs(dpsi) > 2 * g_pi) {
+            if (dpsi > 0)
+                dpsi -= 2 * g_pi;
+            else
+                dpsi += 2 * g_pi;
+        }
+
+        double maxdPsi = g_g * interceptor.nMax / interceptor.V;
+        if (maxdPsi > 2 * g_pi) {
+            maxdPsi -= 2 * g_pi * (int)(maxdPsi / (2 * g_pi));
+        }
+        if (abs(dpsi) > maxdPsi) {
+            if (dpsi < 0)
+                dpsi = -maxdPsi;
+            else
+                dpsi = maxdPsi;
+        }
+        output["n"].push_back(-interceptor.V * dpsi/ g_g);
 
         interceptor.m = tmp_m - interceptor.dm * dt;
         tmp_m = interceptor.m;
@@ -43,22 +77,23 @@ void Solver::integrationEuler(std::map<std::string, std::vector<double>> &output
         if (interceptor.m <= interceptor.mDry)
             interceptor.P = 0;
 
-        double tmp_x = output["x"].back() + interceptor.V * cos(phi) * dt;
-        double tmp_z = output["z"].back() - interceptor.V * sin(phi) * dt;
+        double tmp_x = output["x"].back() + interceptor.V * cos(i_psi.back()) * dt;
+        double tmp_z = output["z"].back() - interceptor.V * sin(i_psi.back()) * dt;
         output["x"].push_back(tmp_x);
         output["z"].push_back(tmp_z);
 
+        i_psi.push_back(i_psi.back() + dpsi * dt);
         interceptor.V = tmp_V;
         interceptor.x = tmp_x;
         interceptor.z = tmp_z;
 
         // ===========================
         // Target trajectory equations
-        double timeToChangen = target.setNewRandomTimingToChangen(dt);
-        if (timeToChangen--) {
+        if ((timeToChangen -= dt) <= 0) {
             timeToChangen = target.setNewRandomTimingToChangen(dt);
             target.setNewRandomn();
         }
+
         output["n_target"].push_back(target.n);
 
         output["V_target"].push_back(target.V);
@@ -80,10 +115,10 @@ void Solver::integrationEuler(std::map<std::string, std::vector<double>> &output
         target.x = tmp_x;
         target.z = tmp_z;
 
-
         distance = sqrt(pow(target.x - interceptor.x, 2) + pow(target.z - interceptor.z, 2));
+        output["distance"].push_back(distance);
 
-        qDebug() << interceptor.V << target.V << distance;
+        qDebug() << phi << dpsi << distance;
     } while (interceptor.V > target.V && distance > 15);
 
 }
